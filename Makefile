@@ -16,7 +16,7 @@ CCC = g++
 # ---------------------------------------------------------------------
 
 CCOPT :=
-CCOPT += -g -O3 -fomit-frame-pointer -pipe -DNDEBUG -pedantic-errors -Wimplicit -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion
+CCOPT += -g -O3 -fomit-frame-pointer -pipe -DNDEBUG -pedantic-errors -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion
 CCOPT +=  -O -fPIC -fexceptions -DIL_STD -std=c++11
 
 # ---------------------------------------------------------------------
@@ -55,6 +55,9 @@ $(EXE): $(LIST_OF_OBJ_FILES)
 
 clean:
 	rm -rf $(TO_CLEAN)
+
+mrproper: clean
+	rm -rf $(EXE)
 	
 doc:
 	doxygen ../MakefileConf/doxygen.conf
