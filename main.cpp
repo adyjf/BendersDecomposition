@@ -22,14 +22,8 @@ int main(int argc, char* argv[]){
         // CBCMODEL.solver()->setObjSense(1);
         // Set log level (will also set underlying solver's log level)
         // CBCMODEL.setLogLevel(3);
-        std::cout << "ok" << std::endl;
-        const double * z = CBCMODEL.solver()->getRowUpper();
 
-        std::cout << "ok1" << std::endl;
-        for(unsigned int i=0; i<NBR_ROWS; i++){
-            std::cout << z[i] << std::endl;
-        }
-        std::cout << "ok2" << std::endl;
+        const double * z = CBCMODEL.solver()->getRowUpper();
 
         const CoinPackedMatrix *MATRIX = CBCMODEL.solver()->getMatrixByRow();
         std::vector<std::vector<double> > x;
@@ -43,7 +37,7 @@ int main(int argc, char* argv[]){
                 x[i][j] = MATRIX->getCoefficient(i,j);
                 std::cout << x[i][j] << "\t";
             }
-            std::cout << std::endl;
+            std::cout << z[i] << std::endl;
         }
     }
     catch(std::exception & e){
