@@ -13,10 +13,11 @@ int main(int argc, char* argv[]){
         // Déclaration problème
         OsiClpSolverInterface OSI_SOLVER;
         OsiClpSolverInterface SP_OSI_SOLVER;
+        OsiClpSolverInterface PPR_OSI_SOLVER;
 
         OSI_SOLVER.readMps(prob_name.c_str());
-        double prob_UB = OSI_SOLVER.getInfinity();
-        double prob_LB = -OSI_SOLVER.getInfinity();
+        prob_UB = OSI_SOLVER.getInfinity();
+        prob_LB = -OSI_SOLVER.getInfinity();
 
         const unsigned int NBR_VARS = OSI_SOLVER.getNumCols();
         const unsigned int NBR_ROWS = OSI_SOLVER.getNumRows();
@@ -34,7 +35,7 @@ int main(int argc, char* argv[]){
 
             double *f = new double[2];
             for(unsigned i=0; i<2; i++)
-                f[i] = OBJECTIVE[i];
+                f[i] = OBJECTIVE[i+2];
 
         // Récuparation matrice contraintes
         const CoinPackedMatrix *MATRIX = OSI_SOLVER.getMatrixByRow();
@@ -73,9 +74,9 @@ int main(int argc, char* argv[]){
                 B[i][j] = MATRIX->getCoefficient(i,j+2);
             b[i][0] = ROW_LB[i];
         }
+        //------------------------------
 
         // Calcul fonction objective SP
-
         // test: y initial (5,5)
         std::vector<std::vector<double> > y_hat;
         y_hat.resize(2);
@@ -88,37 +89,30 @@ int main(int argc, char* argv[]){
                 y_hat[i][j] = 5;
         }
 
-        std::vector<std::vector<double> > lambda;
-        productMatrix(&B, &y_hat, &lambda);
-
-        std::vector<std::vector<double> > SP_yhat;
-        substractMatrix(&b, &lambda, &SP_yhat);
-
         //-- Générer sous problème 1
-        generateSubProblem(&SP_OSI_SOLVER, &At, &SP_yhat, c, NBR_VARS-2, NBR_ROWS);
-        displayProblem(&SP_OSI_SOLVER);
-        SP_OSI_SOLVER.initialSolve();
+        generateSubProblem(&SP_OSI_SOLVER, &At, &B, &b, &y_hat, c);
+        generateMasterProblem(&PPR_OSI_SOLVER, &SP_OSI_SOLVER, f, &B, &b);
+        updateYhat(&PPR_OSI_SOLVER, &y_hat);
 
-        //-- Recuperer la solution ...
-        const double * SOLUTION = SP_OSI_SOLVER.getColSolution();
-        
-        CoinAbsFltEq Equal;
-         
-        std::cout << "     Solution (non zero values only):" << std::endl << std::endl;
-        for(unsigned int j=0; j<NBR_ROWS; ++j)
-        {
-            const double value = SOLUTION[j]; 
-            
-            if(!Equal(value,0))
-            {
-                std::ostringstream oss; oss << j; 
-                std::string var_name("x" + oss.str());
-                
-                printf("       %8s   =  %3.2f \n", var_name.c_str(), value);
-            }
-        }
+        //-- Générer sous problème 2
+        generateSubProblem(&SP_OSI_SOLVER, &At, &B, &b, &y_hat, c);
+        updateMasterProblem(&PPR_OSI_SOLVER, &SP_OSI_SOLVER, f, &B, &b);
+        updateYhat(&PPR_OSI_SOLVER, &y_hat);
 
+        //-- Générer sous problème 3
+        generateSubProblem(&SP_OSI_SOLVER, &At, &B, &b, &y_hat, c);
+        updateMasterProblem(&PPR_OSI_SOLVER, &SP_OSI_SOLVER, f, &B, &b);
+        updateYhat(&PPR_OSI_SOLVER, &y_hat);
 
+        //-- Générer sous problème 4
+        generateSubProblem(&SP_OSI_SOLVER, &At, &B, &b, &y_hat, c);
+        updateMasterProblem(&PPR_OSI_SOLVER, &SP_OSI_SOLVER, f, &B, &b);
+        updateYhat(&PPR_OSI_SOLVER, &y_hat);
+
+        //-- Générer sous problème 5
+        generateSubProblem(&SP_OSI_SOLVER, &At, &B, &b, &y_hat, c);
+        updateMasterProblem(&PPR_OSI_SOLVER, &SP_OSI_SOLVER, f, &B, &b);
+        updateYhat(&PPR_OSI_SOLVER, &y_hat);
 
         std::cout << std::endl;
 
