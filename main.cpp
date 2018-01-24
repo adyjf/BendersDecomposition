@@ -47,7 +47,7 @@ int main(int argc, char* argv[]){
 
 
         //------------------------------
-        std::cout <<std::endl << "Initial problem" << std::endl;
+        std::cout <<std::endl << "\033[4mInitial problem\033[0m" << std::endl;
         displayProblem(&OSI_SOLVER);
         std::cout << std::endl;
 
@@ -91,30 +91,22 @@ int main(int argc, char* argv[]){
 
         //-- Générer sous problème 1
         generateSubProblem(&SP_OSI_SOLVER, &At, &B, &b, &y_hat, c);
-        generateMasterProblem(&PPR_OSI_SOLVER, &SP_OSI_SOLVER, f, &B, &b);
+        generateMasterProblem(&PPR_OSI_SOLVER, &SP_OSI_SOLVER, f, &B, &b, &y_hat);
         updateYhat(&PPR_OSI_SOLVER, &y_hat);
+        std::cout << prob_LB << " <= Optimal <= " << prob_UB << std::endl;
 
-        //-- Générer sous problème 2
-        generateSubProblem(&SP_OSI_SOLVER, &At, &B, &b, &y_hat, c);
-        updateMasterProblem(&PPR_OSI_SOLVER, &SP_OSI_SOLVER, f, &B, &b);
-        updateYhat(&PPR_OSI_SOLVER, &y_hat);
+        unsigned iteration = 1;
 
-        //-- Générer sous problème 3
-        generateSubProblem(&SP_OSI_SOLVER, &At, &B, &b, &y_hat, c);
-        updateMasterProblem(&PPR_OSI_SOLVER, &SP_OSI_SOLVER, f, &B, &b);
-        updateYhat(&PPR_OSI_SOLVER, &y_hat);
+        while((prob_UB - prob_LB > 0.001) && iteration < 100){
+            std::cout << std::endl << "\033[4m Iteration n°" << iteration << " :\033[0m" << std::endl;
+            generateSubProblem(&SP_OSI_SOLVER, &At, &B, &b, &y_hat, c);
+            updateMasterProblem(&PPR_OSI_SOLVER, &SP_OSI_SOLVER, f, &B, &b, &y_hat);
+            updateYhat(&PPR_OSI_SOLVER, &y_hat);
+            std::cout << prob_LB << " <= Optimal <= " << prob_UB << std::endl;
 
-        //-- Générer sous problème 4
-        generateSubProblem(&SP_OSI_SOLVER, &At, &B, &b, &y_hat, c);
-        updateMasterProblem(&PPR_OSI_SOLVER, &SP_OSI_SOLVER, f, &B, &b);
-        updateYhat(&PPR_OSI_SOLVER, &y_hat);
-
-        //-- Générer sous problème 5
-        generateSubProblem(&SP_OSI_SOLVER, &At, &B, &b, &y_hat, c);
-        updateMasterProblem(&PPR_OSI_SOLVER, &SP_OSI_SOLVER, f, &B, &b);
-        updateYhat(&PPR_OSI_SOLVER, &y_hat);
-
-        std::cout << std::endl;
+            iteration++;
+            std::cout << std::endl;
+        }
 
         if(c != NULL){delete[] c; c = NULL;}
         if(f != NULL){delete[] f; f = NULL;}

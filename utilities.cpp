@@ -182,7 +182,8 @@ void generateMasterProblem(OsiClpSolverInterface *PPR_OSI_SOLVER,
                 OsiClpSolverInterface *SP_OSI_SOLVER,
                 double * f,
                 std::vector<std::vector<double> > *B,
-                std::vector<std::vector<double> > *b){
+                std::vector<std::vector<double> > *b,
+                std::vector<std::vector<double> > *y_hat){
 
     const unsigned int nbr_vars = SP_OSI_SOLVER->getNumCols();
     const unsigned int nbr_rows = SP_OSI_SOLVER->getNumRows();
@@ -218,22 +219,6 @@ void generateMasterProblem(OsiClpSolverInterface *PPR_OSI_SOLVER,
     }
 
     // Déclaration problème maitre
-    // Matrice des contraintes
-    CoinPackedMatrix PPR_MATRIX;
-    PPR_MATRIX.setDimensions(0,nbr_rows+1);
-
-    std::vector<std::vector<double> > lambda;
-    productMatrix(&sp_solution_, B, &lambda);
-    // productMatrixScalar(&lambda, -1);
-
-    CoinPackedVector row;
-    for(unsigned j=0; j<nbr_rows; j++){
-        const double value = f[j] - lambda[0][j];
-        row.insert(j, value);
-    }
-    row.insert(nbr_rows, -1);
-    PPR_MATRIX.appendRow(row);
-
     // Fonction objective
     double * PPR_OBJECTIVE = new double[nbr_rows+1];
     for(unsigned j=0; j<nbr_rows; j++){
@@ -241,16 +226,46 @@ void generateMasterProblem(OsiClpSolverInterface *PPR_OSI_SOLVER,
     }
     PPR_OBJECTIVE[nbr_rows] = 1;
 
-    // Second Membre
+    CoinPackedMatrix PPR_MATRIX;
+        PPR_MATRIX.setDimensions(0,nbr_rows+1);
     double * PPR_ROW_UB = new double;
-    std::vector<std::vector<double> > ppr_row_ub_;    
-    productMatrix(&sp_solution_, b, &ppr_row_ub_);
-
-    *PPR_ROW_UB = -ppr_row_ub_[0][0];
-
     double * PPR_ROW_LB = new double;
-    *PPR_ROW_LB = - PPR_OSI_SOLVER->getInfinity();
 
+    if(SP_OSI_SOLVER->isProvenOptimal()){
+        // Maj prob_UB
+        std::vector<std::vector<double> > f_;
+        f_.resize(1);
+        f_[0].resize(nbr_rows);
+        for(unsigned j=0; j<nbr_rows; j++)
+            f_[0][j] = f[j];
+        std::vector<std::vector<double> > f_yhat;
+        productMatrix(&f_, y_hat, &f_yhat);
+        prob_UB = SP_OSI_SOLVER->getObjValue() + f_yhat[0][0];
+
+        // Matrice des contraintes
+        std::vector<std::vector<double> > lambda;
+        productMatrix(&sp_solution_, B, &lambda);
+        // productMatrixScalar(&lambda, -1);
+
+        CoinPackedVector row;
+        for(unsigned j=0; j<nbr_rows; j++){
+            const double value = f[j] - lambda[0][j];
+            row.insert(j, value);
+        }
+        row.insert(nbr_rows, -1);
+        PPR_MATRIX.appendRow(row);
+
+        // Second Membre
+        std::vector<std::vector<double> > ppr_row_ub_;    
+        productMatrix(&sp_solution_, b, &ppr_row_ub_);
+
+        *PPR_ROW_UB = -ppr_row_ub_[0][0];
+
+        *PPR_ROW_LB = - PPR_OSI_SOLVER->getInfinity();
+    }
+    else{
+        std::cout << "Unbounded TODO" << std::endl;
+    }
     // Borne des variables
     double * PPR_COL_UB = new double[nbr_rows+1];
     double * PPR_COL_LB = new double[nbr_rows+1];
@@ -306,7 +321,8 @@ void updateMasterProblem(OsiClpSolverInterface *PPR_OSI_SOLVER,
                 OsiClpSolverInterface *SP_OSI_SOLVER,
                 double * f,
                 std::vector<std::vector<double> > *B,
-                std::vector<std::vector<double> > *b){
+                std::vector<std::vector<double> > *b,
+                std::vector<std::vector<double> > *y_hat){
 
     const unsigned int nbr_vars = SP_OSI_SOLVER->getNumCols();
     const unsigned int nbr_rows = SP_OSI_SOLVER->getNumRows();
@@ -342,28 +358,43 @@ void updateMasterProblem(OsiClpSolverInterface *PPR_OSI_SOLVER,
     }
 
     // Déclaration problème maitre
-    // Matrice des contraintes
-    CoinPackedVector row;
-    std::vector<std::vector<double> > lambda;
-    productMatrix(&sp_solution_, B, &lambda);
-    for(unsigned j=0; j<nbr_rows; j++){
-        const double value = f[j] - lambda[0][j];
-        row.insert(j, value);
-    }
-    row.insert(nbr_rows, -1);
-
-    // Second Membre
     double * PPR_ROW_UB = new double;
-    std::vector<std::vector<double> > ppr_row_ub_;    
-    productMatrix(&sp_solution_, b, &ppr_row_ub_);
-
-    *PPR_ROW_UB = -ppr_row_ub_[0][0];
-
     double * PPR_ROW_LB = new double;
-    *PPR_ROW_LB = - PPR_OSI_SOLVER->getInfinity();
 
-    PPR_OSI_SOLVER->addRow(row, *PPR_ROW_LB, *PPR_ROW_UB);
+    if(SP_OSI_SOLVER->isProvenOptimal()){
+        // Maj prob_UB
+        std::vector<std::vector<double> > f_;
+        f_.resize(1);
+        f_[0].resize(nbr_rows);
+        for(unsigned j=0; j<nbr_rows; j++)
+            f_[0][j] = f[j];
+        std::vector<std::vector<double> > f_yhat;
+        productMatrix(&f_, y_hat, &f_yhat);
+        prob_UB = SP_OSI_SOLVER->getObjValue() + f_yhat[0][0];
 
+        // Matrice des contraintes
+        CoinPackedVector row;
+        std::vector<std::vector<double> > lambda;
+        productMatrix(&sp_solution_, B, &lambda);
+        for(unsigned j=0; j<nbr_rows; j++){
+            const double value = f[j] - lambda[0][j];
+            row.insert(j, value);
+        }
+        row.insert(nbr_rows, -1);
+
+        // Second Membre
+        std::vector<std::vector<double> > ppr_row_ub_;    
+        productMatrix(&sp_solution_, b, &ppr_row_ub_);
+
+        *PPR_ROW_UB = -ppr_row_ub_[0][0];
+
+        *PPR_ROW_LB = - PPR_OSI_SOLVER->getInfinity();
+
+        PPR_OSI_SOLVER->addRow(row, *PPR_ROW_LB, *PPR_ROW_UB);
+    }
+    else{
+        std::cout << "Unbounded TODO" << std::endl;
+    }
     
     // Nettoyage
     if(PPR_ROW_UB != NULL){delete PPR_ROW_UB; PPR_ROW_UB = NULL;}
