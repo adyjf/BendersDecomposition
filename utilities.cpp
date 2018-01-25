@@ -5,6 +5,7 @@
 
 double prob_UB;
 double prob_LB;
+unsigned int NBR_VARS_X, NBR_VARS_Y;
 
 
 int productMatrix(const std::vector<std::vector<double> > *A, 
@@ -193,7 +194,7 @@ void generateSubProblem(OsiClpSolverInterface *OSI_SOLVER,
     if(COL_UB != NULL){delete[] COL_UB; COL_UB = NULL;}
     if(COL_LB != NULL){delete[] COL_LB; COL_LB = NULL;}
     if(ROW_LB != NULL){delete[] ROW_LB; ROW_LB = NULL;} 
-    if(OBJECTIVE != NULL){delete[] OBJECTIVE; OBJECTIVE = NULL;} 
+    if(OBJECTIVE != NULL){delete[] OBJECTIVE; OBJECTIVE = NULL;}
 }
 
 void generateMasterProblem(OsiClpSolverInterface *PPR_OSI_SOLVER,
@@ -340,7 +341,7 @@ void generateMasterProblem(OsiClpSolverInterface *PPR_OSI_SOLVER,
     if(PPR_COL_LB != NULL){delete[] PPR_COL_LB; PPR_COL_LB = NULL;}
     if(PPR_ROW_UB != NULL){delete PPR_ROW_UB; PPR_ROW_UB = NULL;}
     if(PPR_ROW_LB != NULL){delete PPR_ROW_LB; PPR_ROW_LB = NULL;} 
-    if(PPR_OBJECTIVE != NULL){delete[] PPR_OBJECTIVE; PPR_OBJECTIVE = NULL;} 
+    if(PPR_OBJECTIVE != NULL){delete[] PPR_OBJECTIVE; PPR_OBJECTIVE = NULL;}
 }
 
 void updateYhat(OsiClpSolverInterface *PPR_OSI_SOLVER,
@@ -490,5 +491,5 @@ void updateMasterProblem(OsiClpSolverInterface *PPR_OSI_SOLVER,
     
     // Nettoyage
     if(PPR_ROW_UB != NULL){delete PPR_ROW_UB; PPR_ROW_UB = NULL;}
-    if(PPR_ROW_LB != NULL){delete PPR_ROW_LB; PPR_ROW_LB = NULL;} 
+    if(PPR_ROW_LB != NULL){delete PPR_ROW_LB; PPR_ROW_LB = NULL;}
 }

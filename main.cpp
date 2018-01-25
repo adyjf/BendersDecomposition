@@ -22,6 +22,13 @@ int main(int argc, char* argv[]){
         const unsigned int NBR_VARS = OSI_SOLVER.getNumCols();
         const unsigned int NBR_ROWS = OSI_SOLVER.getNumRows();
 
+        std::cout << "Nombre de variables y : ";
+        std::cin >> NBR_VARS_Y;
+        if(NBR_VARS - NBR_VARS_Y > 0)
+            NBR_VARS_X = NBR_VARS - NBR_VARS_Y;
+        else
+            return -1;
+
         // Set objective function sense (1 for min (default), -1 for max,)
         OSI_SOLVER.setObjSense(1);
         // Set log level (will also set underlying solver's log level)
@@ -29,13 +36,20 @@ int main(int argc, char* argv[]){
 
         // Récuparation fonction objective
         const double *OBJECTIVE = OSI_SOLVER.getObjCoefficients();
-            double *c = new double[2];
+            /*double *c = new double[2];
             for(unsigned i=0; i<2; i++)
                 c[i] = OBJECTIVE[i];
 
             double *f = new double[2];
             for(unsigned i=0; i<2; i++)
-                f[i] = OBJECTIVE[i+2];
+                f[i] = OBJECTIVE[i+2];*/
+            double *c = new double[NBR_VARS_X];
+            for(unsigned i=0; i<NBR_VARS_X; i++)
+                c[i] = OBJECTIVE[i];
+
+            double *f = new double[NBR_VARS_Y];
+            for(unsigned i=0; i<NBR_VARS_Y; i++)
+                f[i] = OBJECTIVE[i+NBR_VARS_X];
 
         // Récuparation matrice contraintes
         const CoinPackedMatrix *MATRIX = OSI_SOLVER.getMatrixByRow();
@@ -54,7 +68,7 @@ int main(int argc, char* argv[]){
         //-- Récupérer matrices A, B et b
         CoinPackedMatrix At;
         At.setDimensions(0, NBR_ROWS);
-        for(unsigned i=0; i<2; i++){
+        for(unsigned i=0; i<NBR_VARS_X; i++){
             CoinPackedVector row;
             for(unsigned j=0; j<NBR_ROWS; j++)
                 row.insert(j, MATRIX->getCoefficient(j,i));
@@ -65,21 +79,22 @@ int main(int argc, char* argv[]){
         B.resize(NBR_ROWS);
         b.resize(NBR_ROWS);
         for(unsigned i=0; i<NBR_ROWS; i++){
-            B[i].resize(2);
+            B[i].resize(NBR_VARS_Y);
             b[i].resize(1);
         }
 
         for(unsigned i=0; i<NBR_ROWS; i++){
-            for(unsigned j=0; j<2; j++)
-                B[i][j] = MATRIX->getCoefficient(i,j+2);
+            for(unsigned j=0; j<NBR_VARS_Y; j++)
+                B[i][j] = MATRIX->getCoefficient(i,j+NBR_VARS_X);
             b[i][0] = ROW_LB[i];
         }
+
         //------------------------------
 
         // Calcul fonction objective SP
         // test: y initial (5,5)
         std::vector<std::vector<double> > y_hat;
-        y_hat.resize(2);
+        y_hat.resize(NBR_VARS_Y);
         for(unsigned i=0; i<y_hat.size(); i++){
             y_hat[i].resize(1);
         }
@@ -97,7 +112,13 @@ int main(int argc, char* argv[]){
 
         unsigned iteration = 1;
 
-        while((prob_UB - prob_LB > 0.001) && iteration < 100){
+        // std::cout << std::endl << "\033[4m Iteration n°" << iteration << " :\033[0m" << std::endl;
+        // generateSubProblem(&SP_OSI_SOLVER, &At, &B, &b, &y_hat, c);
+        // updateMasterProblem(&PPR_OSI_SOLVER, &SP_OSI_SOLVER, f, &B, &b, &y_hat);
+        // updateYhat(&PPR_OSI_SOLVER, &y_hat);
+        // std::cout << prob_LB << " <= Optimal <= " << prob_UB << std::endl;
+
+        while((prob_UB - prob_LB > 0.001) && iteration < 50){
             std::cout << std::endl << "\033[4m Iteration n°" << iteration << " :\033[0m" << std::endl;
             generateSubProblem(&SP_OSI_SOLVER, &At, &B, &b, &y_hat, c);
             updateMasterProblem(&PPR_OSI_SOLVER, &SP_OSI_SOLVER, f, &B, &b, &y_hat);
@@ -112,7 +133,6 @@ int main(int argc, char* argv[]){
         if(f != NULL){delete[] f; f = NULL;}
         if(ROW_UB != NULL){delete[] ROW_UB; ROW_UB = NULL;}
         if(ROW_LB != NULL){delete[] ROW_LB; ROW_LB = NULL;} 
-        if(OBJECTIVE != NULL){delete[] OBJECTIVE; OBJECTIVE = NULL;} 
     }
     catch(std::exception & e){
         std::cerr << "\nException : " << e.what() << std::endl;
