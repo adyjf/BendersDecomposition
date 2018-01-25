@@ -476,7 +476,6 @@ void updateMasterProblem(OsiClpSolverInterface *PPR_OSI_SOLVER,
             row.insert(j, value);
         }
         row.insert(nbr_rows, -1);
-        PPR_MATRIX.appendRow(row);
 
         // Second Membre
         std::vector<std::vector<double> > ppr_row_ub_;    
@@ -485,6 +484,8 @@ void updateMasterProblem(OsiClpSolverInterface *PPR_OSI_SOLVER,
         *PPR_ROW_UB = -ppr_row_ub_[0][0];
 
         *PPR_ROW_LB = - PPR_OSI_SOLVER->getInfinity();
+
+        PPR_OSI_SOLVER->addRow(row, *PPR_ROW_LB, *PPR_ROW_UB);
     }
     
     // Nettoyage
