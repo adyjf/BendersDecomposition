@@ -1,0 +1,150 @@
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{multicol}
+\setlength{\columnseprule}{0.4pt}
+
+\newsavebox{\auteurbm}
+\newenvironment{extrait}[1]{\small\slshape
+\savebox{\auteurbm}{\upshape\sffamily#1}
+\begin{flushright}}{\\[4pt]\usebox{\auteurbm}
+\end{flushright}\normalsize\upshape}
+
+\title{Benders Decomposition}
+\author{Alexandre Do, Paul-Alexis Dray, Kamil Rachidi and Jean-François Thai}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Dans ce rapport, nous nous proposons de mettre en oeuvre la décomposition de Benders, pour résoudre des problèmes de la forme :
+\begin{equation}
+\begin{aligned}
+& {\text{minimize}}
+& & c^{T}x + f^{T}y \\
+& \text{subject to}
+& & Ax + By \leq b, \\
+& & & x, y \geq 0
+\end{aligned}
+\label{InitialPb}
+\end{equation}
+\end{abstract}
+
+\section{Introduction}
+
+Nous avons réalisé notre implémentation en \textbf{C++}, en utilisant le solveur \textbf{Clp} du projet Coin-or pour la résolution de problèmes d'optimisation.\\
+Dans la suite, nous introduirons les principales classes de la librairie Clp que nous avons utilisées, avant de présenter en détail  l'algorithme que nous avons implémenté. Pour finir, nous discuterons des résultats de nos expérimentations.
+
+\section{La librarie Clp}
+\textit{Clp stands for: \textbf{C}oin-or \textbf{L}inear \textbf{P}rogramming}.\\
+Clp est un solveur de problème linéaire programmable open-source, écrit en C ++. Il fait partie du projet Coin-Or, et est conçu pour trouver des solutions de problèmes d'optimisation mathématique de la forme  :
+\begin{equation}
+\begin{aligned}
+& {\text{minimize}}
+& & c^{T}x \\
+& \text{subject to}
+& & row_{lb} \leq Ax \leq row_{ub}, \\
+& & & col_{lb} \leq x \leq col_{ub}
+\end{aligned}
+\label{defaultPb}
+\end{equation}
+
+Dans notre implémentation, nous utilisons :
+\begin{itemize}
+\item la classe \textit{OsiClpSolverInterface} qui est le solveur de base : il suffit de renseigner le vecteur de la fonction objective, la matrice des contraintes, le vecteur du second membre et les bornes des variables.
+\item le format de fichier MPS (Mathematical Programming System) qui permet de représenter des problèmes de programmation linéaire ou d'entiers mixtes.
+\end{itemize}
+
+\section{L'algorithme de décomposition de Benders}
+\subsection{Principe}
+L'algorithme de Benders pour la résolution de problème d'optimisation de la forme \ref{InitialPb} s'écrit de la manière suivante :
+
+\begin{algorithm}[H]
+\caption{\label{benders_algo}Benders Decomposition}
+\begin{algorithmic}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
+  \REQUIRE $lp$ un problème de la forme \ref{InitialPb}
+  \STATE Initialiser $\hat{y}$, $UB=+\infty$, $LB=-\infty$
+  \WHILE{$UB-LB > \epsilon$}
+    \STATE $\hat{w} \leftarrow$ solution du sous-problème
+    \IF{$\hat{u}$ non borné}
+    	\STATE ajouter la coupe de faisabilité $[b - By]^{T}\hat{u} \leq 0$ au problème principal restreint
+    \ELSE
+    	\STATE ajouter la coupe d'optimalité $f^{T}y + [b - By]^{T}\hat{u} \leq z$ au problème principal restreint
+        \STATE $LB = f^{T}y + [b - By]^{T}\hat{u}$
+    \ENDIF
+    \STATE $\hat{z} \leftarrow$ solution du problème principal restreint
+    \STATE $UB = \hat{z}$ 
+  \ENDWHILE
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Notre implémentation}
+Pour implémenter l'algorithme \ref{benders_algo}, nous avons procédé de la manière suivante:
+\begin{enumerate}[nolistsep]
+\item nous lisons le problème à partir d'un fichier MPS
+\item nous récupérons ses différents paramètres
+\item nous mettons toutes les valeurs du vecteur $\hat{y}$ à 5 (choix arbitraire)
+\item nous générons le premier sous-problème, grâce à notre fonction $generateSubProblem$
+\item nous résolvons le sous-problème et générons le premier problème principal restreint, grâce à notre fonction $generateMasterProblem$
+\end{enumerate}
+Nous répétons ensuite les étapes 4 et 5, en ajoutant des coupes sur le problème principal restreint grâce à notre fonction $updateMasterProblem$ tant que la diffèrence entre la borne inférieure et supérieure est supérieure à $\epsilon$ défini à 0,01
+
+\section{Commentaires sur nos résultats}
+Nous avons testé notre programme sur trois problèmes (fournis dans le dossier dat).
+\subsection{Problème 1}
+Le premier problème que nous avons soumis à notre programme est l'exemple présenté en fin du cours 5 et traité en classe :
+\begin{equation}
+\begin{aligned}
+& {\text{minimize}}
+& & 2x_{1} + 3x_{2} + 4y_{1} + y_{2} \\
+& \text{subject to}
+& & x_{1} + x_{2} + y_{1} + y_{2} \geq 9.5, \\
+& & & x_{1} + 2x_{2} + y_{1} \geq 3.5, \\
+& & & 3x_{1} + 2x_{2} \geq 1.5, \\
+& & & x_{1} + y_{1} \geq 0.5, \\
+& & & x_{2} \geq 0.5, \\
+& & & x, y \geq 0
+\end{aligned}
+\label{Pb1}
+\end{equation}
+Sur ce premier problème, notre programme se comporte exactement comme nous le souhaitons et suit parfaitement les étapes que nous avons détaillées en classe : nous trouvons le résultat optimal attendu sans aucune difficulté.
+
+\subsection{Problème 2}
+Le deuxième problème que nous avons soumis à notre programme est une variante de l'exemple traité dans le TP2 :
+\begin{equation}
+\begin{aligned}
+& {\text{minimize}}
+& & -x_{1} - 2y_{1} \\
+& \text{subject to}
+& & -2x_{1} + 2y_{1} \geq 3, \\
+& & & 2x_{1} + 2y_{1} \geq 9, \\
+& & & 9x_{1} - 4y_{1} \geq 21, \\
+& & & x, y \geq 0
+\end{aligned}
+\label{Pb2}
+\end{equation}
+Sur ce problème, notre programme ne parvient pas à trouver la solution optimale. Cela pourrait être dû à un problème dans la génération de coupe de faisabilité.
+
+\subsection{MKnapsack}
+Enfin, pour le dernier problème, nous avons généré aléatoirement un problème de 20 variables soumis à 10 contraintes, en utilisant une variante de la procèdure donnée dans le fichier $partie-a.cpp$ du TP2. Nous avons procédé comme suit : on génére le vecteur $[c,f]$, la matrice $[A,B]$, puis le second membre $b$.
+
+Pour ce problème, notre programme ne semble pas rencontrer de problème : nous trouvons la solution attendue (calculée avec le solveur Clp). Cependant, nous devons noter qu'au cours de ces itérations, nous n'avons pas rencontré de cas où le sous-problème est non borné (cas qui pourrait être difficile à gérer cf. Problème 2).
+
+\end{document}
