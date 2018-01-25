@@ -36,13 +36,6 @@ int main(int argc, char* argv[]){
 
         // Récuparation fonction objective
         const double *OBJECTIVE = OSI_SOLVER.getObjCoefficients();
-            /*double *c = new double[2];
-            for(unsigned i=0; i<2; i++)
-                c[i] = OBJECTIVE[i];
-
-            double *f = new double[2];
-            for(unsigned i=0; i<2; i++)
-                f[i] = OBJECTIVE[i+2];*/
             double *c = new double[NBR_VARS_X];
             for(unsigned i=0; i<NBR_VARS_X; i++)
                 c[i] = OBJECTIVE[i];
